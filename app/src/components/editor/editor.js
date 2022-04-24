@@ -32,9 +32,23 @@ export default function Editor() {
       .catch(alert);
   }
 
+  function deletePage(page) {
+    axios
+      .post("./api/deletePage.php", { name: page })
+      .then(loadPageList)
+      .catch(() => alert("Страницы не существует"));
+  }
+
   const { pageList } = _state;
   const pages = pageList.map((page, i) => {
-    return <h1 key={i}>{page}</h1>;
+    return (
+      <h1 key={i}>
+        {page}
+        <a href="#" onClick={() => deletePage(page)}>
+          (x)
+        </a>
+      </h1>
+    );
   });
 
   return (
