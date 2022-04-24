@@ -35,7 +35,25 @@ export default function Editor() {
   function open(page) {
     setCurrentPage(`../${page}`);
     iframe.load(currentPage, () => {
-      console.log(currentPage);
+      const body = iframe.contentDocument.body;
+      const textNodes = [];
+
+      function recursy(element) {
+        element.childNodes.forEach((node) => {
+          if (node.nodeName === "#text" && node.nodeValue.replace(/\s+/g, "").length > 0) {
+            textNodes.push(node);
+          } else {
+            recursy(node);
+          }
+        });
+      }
+      recursy(body);
+      textNodes.forEach((node) => {
+        const wrapper = iframe.contentDocument.createElement("text-editor");
+        node.parentNode.replaceChild(wrapper, node);
+        wrapper.appendChild(node);
+        wrapper.contentEditable = true;
+      });
     });
   }
 
