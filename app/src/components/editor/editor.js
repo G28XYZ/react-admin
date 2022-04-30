@@ -4,7 +4,9 @@ import "../../helpers/iframeLoader.js";
 
 export default function Editor() {
   let iframe;
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState("index.html");
+  const [virtualDom, setVirtualDom] = useState({});
   const [_state, setState] = useState({
     pageList: [],
     newPageName: "",
@@ -17,7 +19,7 @@ export default function Editor() {
     // return () => {
     //   cleanup
     // };
-  }, [_setState.pageList]);
+  }, []);
 
   function loadPageList() {
     axios
@@ -33,27 +35,90 @@ export default function Editor() {
   }
 
   function open(page) {
+    // setCurrentPage(`../${page}?rnd=${Math.random()}`);
     setCurrentPage(`../${page}`);
-    iframe.load(currentPage, () => {
-      const body = iframe.contentDocument.body;
-      const textNodes = [];
 
-      function recursy(element) {
-        element.childNodes.forEach((node) => {
-          if (node.nodeName === "#text" && node.nodeValue.replace(/\s+/g, "").length > 0) {
-            textNodes.push(node);
-          } else {
-            recursy(node);
-          }
-        });
-      }
-      recursy(body);
-      textNodes.forEach((node) => {
-        const wrapper = iframe.contentDocument.createElement("text-editor");
-        node.parentNode.replaceChild(wrapper, node);
-        wrapper.appendChild(node);
-        wrapper.contentEditable = true;
+    axios
+      .get(`../${page}`)
+      .then((res) => parseStringToDom(res.data))
+      .then(wrapTextNodes)
+      .then((dom) => {
+        setVirtualDom(dom);
+        console.log(virtualDom);
+        return dom;
+      })
+      .then(serializeDOMToString)
+      .then((html) => axios.post("./api/saveTempPage.php", { html }))
+      .then(() => iframe.load("../temp.html"))
+      .then(() => {
+        enableEditing();
+        setLoading(false);
       });
+
+    // iframe.load(currentPage, () => {});
+  }
+
+  function save() {
+    const newDom = virtualDom.cloneNode(virtualDom);
+    unwrapTextNodes(newDom);
+    const html = serializeDOMToString(newDom);
+    console.log(virtualDom);
+  }
+
+  function enableEditing() {
+    iframe.contentDocument.body.querySelectorAll("text-editor").forEach((element) => {
+      element.contentEditable = true;
+      element.addEventListener("input", () => {
+        onTextEdit(element);
+      });
+    });
+  }
+
+  function onTextEdit(element) {
+    const id = element.getAttribute("nodeid");
+    console.log(id, virtualDom);
+    virtualDom.body.querySelector(`[nodeid]="${id}"`).innerHTML = element.innerHTML;
+  }
+
+  function parseStringToDom(str) {
+    const parser = new DOMParser();
+    return parser.parseFromString(str, "text/html");
+  }
+
+  function wrapTextNodes(dom) {
+    const body = dom.body;
+    const textNodes = [];
+
+    function recursy(element) {
+      element.childNodes.forEach((node) => {
+        if (node.nodeName === "#text" && node.nodeValue.replace(/\s+/g, "").length > 0) {
+          textNodes.push(node);
+        } else {
+          recursy(node);
+        }
+      });
+    }
+
+    recursy(body);
+
+    textNodes.forEach((node, i) => {
+      const wrapper = dom.createElement("text-editor");
+      node.parentNode.replaceChild(wrapper, node);
+      wrapper.appendChild(node);
+      wrapper.setAttribute("nodeId", i);
+    });
+
+    return dom;
+  }
+
+  function serializeDOMToString(dom) {
+    const serializer = new XMLSerializer();
+    return serializer.serializeToString(dom);
+  }
+
+  function unwrapTextNodes(dom) {
+    dom.body.querySelectorAll("text-editor").forEach((element) => {
+      element.parentNode.replaceChild(element.firstChild, element);
     });
   }
 
@@ -86,11 +151,9 @@ export default function Editor() {
   });
 
   return (
-    <iframe src={currentPage} frameBorder={0}></iframe>
-    // <>
-    //   <input onChange={(e) => _setState({ newPageName: e.target.value })} type="text" />
-    //   <button onClick={createNewPage}>Создать страницу</button>
-    //   {pages}
-    // </>
+    <>
+      <button onClick={save}>click</button>
+      <iframe src={currentPage} frameBorder={0}></iframe>
+    </>
   );
 }
