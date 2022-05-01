@@ -4,9 +4,9 @@ import "../../helpers/iframeLoader.js";
 
 export default function Editor() {
   let iframe;
-  const [loading, setLoading] = useState(true);
+  let virtualDom;
+  const [_virtualDom, setVirtualDom] = useState();
   const [currentPage, setCurrentPage] = useState("index.html");
-  const [virtualDom, setVirtualDom] = useState({});
   const [_state, setState] = useState({
     pageList: [],
     newPageName: "",
@@ -16,9 +16,6 @@ export default function Editor() {
 
   useEffect(() => {
     init(currentPage);
-    // return () => {
-    //   cleanup
-    // };
   }, []);
 
   function loadPageList() {
@@ -36,15 +33,15 @@ export default function Editor() {
 
   function open(page) {
     // setCurrentPage(`../${page}?rnd=${Math.random()}`);
-    setCurrentPage(`../${page}`);
+    setCurrentPage(page);
 
     axios
       .get(`../${page}`)
       .then((res) => parseStringToDom(res.data))
       .then(wrapTextNodes)
       .then((dom) => {
-        setVirtualDom(dom);
-        console.log(virtualDom);
+        virtualDom = dom;
+        setVirtualDom(virtualDom);
         return dom;
       })
       .then(serializeDOMToString)
@@ -52,17 +49,17 @@ export default function Editor() {
       .then(() => iframe.load("../temp.html"))
       .then(() => {
         enableEditing();
-        setLoading(false);
+        console.log(virtualDom);
       });
 
     // iframe.load(currentPage, () => {});
   }
 
   function save() {
-    const newDom = virtualDom.cloneNode(virtualDom);
+    const newDom = _virtualDom.cloneNode(_virtualDom);
     unwrapTextNodes(newDom);
     const html = serializeDOMToString(newDom);
-    console.log(virtualDom);
+    axios.post("./api/savePage.php", { pageName: currentPage, html });
   }
 
   function enableEditing() {
@@ -77,7 +74,7 @@ export default function Editor() {
   function onTextEdit(element) {
     const id = element.getAttribute("nodeid");
     console.log(id, virtualDom);
-    virtualDom.body.querySelector(`[nodeid]="${id}"`).innerHTML = element.innerHTML;
+    virtualDom.body.querySelector(`[nodeid="${id}"]`).innerHTML = element.innerHTML;
   }
 
   function parseStringToDom(str) {
@@ -105,7 +102,7 @@ export default function Editor() {
       const wrapper = dom.createElement("text-editor");
       node.parentNode.replaceChild(wrapper, node);
       wrapper.appendChild(node);
-      wrapper.setAttribute("nodeId", i);
+      wrapper.setAttribute("nodeid", i);
     });
 
     return dom;
@@ -153,7 +150,7 @@ export default function Editor() {
   return (
     <>
       <button onClick={save}>click</button>
-      <iframe src={currentPage} frameBorder={0}></iframe>
+      <iframe src={`../${currentPage}`} frameBorder={0}></iframe>
     </>
   );
 }
