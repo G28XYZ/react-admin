@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 import DOMHelper from "../../helpers/domHelper.js";
+import EditorText from "../editorText/editorText.js";
 import "../../helpers/iframeLoader.js";
 
 export default function Editor() {
@@ -48,10 +49,8 @@ export default function Editor() {
       .then(DOMHelper.serializeDOMToString)
       .then((html) => axios.post("./api/saveTempPage.php", { html }))
       .then(() => iframe.load("../temp.html"))
-      .then(() => {
-        enableEditing();
-        console.log(virtualDom);
-      });
+      .then(enableEditing)
+      .then(() => injectStyle());
 
     // iframe.load(currentPage, () => {});
   }
@@ -65,17 +64,25 @@ export default function Editor() {
 
   function enableEditing() {
     iframe.contentDocument.body.querySelectorAll("text-editor").forEach((element) => {
-      element.contentEditable = true;
-      element.addEventListener("input", () => {
-        onTextEdit(element);
-      });
+      const id = element.getAttribute("nodeid");
+      const virtualElement = virtualDom.body.querySelector(`[nodeid="${id}"]`);
+      new EditorText(element, virtualElement);
     });
   }
 
-  function onTextEdit(element) {
-    const id = element.getAttribute("nodeid");
-    console.log(id, virtualDom);
-    virtualDom.body.querySelector(`[nodeid="${id}"]`).innerHTML = element.innerHTML;
+  function injectStyle() {
+    const style = iframe.contentDocument.createElement("style");
+    style.innerHTML = `
+        text-editor:hover {
+          outline: 3px solid orange;
+          outline-offset: 8px;
+        }
+        text-editor:focus {
+          outline: 3px solid red;
+          outline-offset: 8px;
+        }
+      `;
+    iframe.contentDocument.head.appendChild(style);
   }
 
   function createNewPage() {
