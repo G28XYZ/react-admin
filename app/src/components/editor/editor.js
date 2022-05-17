@@ -123,8 +123,9 @@ export default function Editor() {
     );
   });
 
-  const publish = () =>
-    UIkit.modal.confirm("Сохранить изменения?").then(
+  const publish = () => {
+    UIkit.modal.labels = { ok: "Опубликовать", cancel: "Отменить" };
+    UIkit.modal.confirm("<h2>Сохранить изменения?</h2>").then(
       function () {
         save();
         console.log("Confirmed.");
@@ -133,6 +134,7 @@ export default function Editor() {
         console.log("Rejected.");
       }
     );
+  };
 
   // const spinner = load ? <Spinner active={load} /> : <Spinner active={load} />;
 
