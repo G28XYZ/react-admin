@@ -1,11 +1,10 @@
 import React from "react";
-import ReactDOM from "react-dom/client";
+import ReactDOM from "react-dom";
 import Editor from "./components/editor";
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-
-root.render(
+ReactDOM.render(
   <>
     <Editor />
-  </>
+  </>,
+  document.getElementById("root")
 );

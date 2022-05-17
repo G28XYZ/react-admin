@@ -2,6 +2,9 @@ import axios from "axios";
 import React, { useState, useEffect } from "react";
 import DOMHelper from "../../helpers/domHelper.js";
 import EditorText from "../editorText/editorText.js";
+import UIkit from "uikit";
+import Spinner from "../spinner/spinner";
+
 import "../../helpers/iframeLoader.js";
 
 export default function Editor() {
@@ -13,6 +16,7 @@ export default function Editor() {
     pageList: [],
     newPageName: "",
   });
+  const [load, setLoad] = useState(true);
 
   const _setState = (data) => setState((state) => ({ ...state, ...data }));
 
@@ -50,7 +54,8 @@ export default function Editor() {
       .then((html) => axios.post("./api/saveTempPage.php", { html }))
       .then(() => iframe.load("../temp.html"))
       .then(enableEditing)
-      .then(() => injectStyle());
+      .then(() => injectStyle())
+      .then(() => setLoad(false));
 
     // iframe.load(currentPage, () => {});
   }
@@ -59,7 +64,12 @@ export default function Editor() {
     const newDom = _virtualDom.cloneNode(_virtualDom);
     DOMHelper.unwrapTextNodes(newDom);
     const html = DOMHelper.serializeDOMToString(newDom);
-    axios.post("./api/savePage.php", { pageName: currentPage, html });
+    setLoad(true);
+    axios
+      .post("./api/savePage.php", { pageName: currentPage, html })
+      .then(() => UIkit.notification({ message: "Готово!", status: "success" }))
+      .catch(() => UIkit.notification({ message: "Ошибка!", status: "warning" }))
+      .finally(() => setLoad(false));
   }
 
   function enableEditing() {
@@ -113,10 +123,29 @@ export default function Editor() {
     );
   });
 
+  const publish = () =>
+    UIkit.modal.confirm("Сохранить изменения?").then(
+      function () {
+        save();
+        console.log("Confirmed.");
+      },
+      function () {
+        console.log("Rejected.");
+      }
+    );
+
+  // const spinner = load ? <Spinner active={load} /> : <Spinner active={load} />;
+
   return (
     <>
-      <button onClick={save}>click</button>
       <iframe src={`../${currentPage}`} frameBorder={0}></iframe>
+
+      <div className="panel">
+        <button onClick={publish} className="uk-button uk-button-primary">
+          Опубликовать
+        </button>
+      </div>
+      <Spinner active={load} />
     </>
   );
 }
