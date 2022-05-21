@@ -4,6 +4,8 @@ import DOMHelper from "../../helpers/domHelper.js";
 import EditorText from "../editorText/editorText.js";
 import UIkit from "uikit";
 import Spinner from "../spinner/spinner";
+import ModalOpenPage from "../modal-open-page/ModalOpenPage";
+import ModalPublish from "../modal-publish/ModalPublish";
 
 import "../../helpers/iframeLoader.js";
 
@@ -61,7 +63,7 @@ export default function Editor() {
   }
 
   function save() {
-    const newDom = _virtualDom.cloneNode(_virtualDom);
+    const newDom = virtualDom.cloneNode(virtualDom);
     DOMHelper.unwrapTextNodes(newDom);
     const html = DOMHelper.serializeDOMToString(newDom);
     setLoad(true);
@@ -123,31 +125,30 @@ export default function Editor() {
     );
   });
 
-  const publish = () => {
-    UIkit.modal.labels = { ok: "Опубликовать", cancel: "Отменить" };
-    UIkit.modal.confirm("<h2>Сохранить изменения?</h2>").then(
-      function () {
-        save();
-        console.log("Confirmed.");
-      },
-      function () {
-        console.log("Rejected.");
-      }
-    );
+  const openModal = (e) => {
+    const name = e.target.name;
+    UIkit.modal("#modal-" + name).show();
   };
-
-  // const spinner = load ? <Spinner active={load} /> : <Spinner active={load} />;
 
   return (
     <>
       <iframe src={`../${currentPage}`} frameBorder={0}></iframe>
 
       <div className="panel">
-        <button onClick={publish} className="uk-button uk-button-primary">
+        <button
+          onClick={openModal}
+          className="uk-button uk-button-primary uk-margin-small-right"
+          name="page"
+        >
+          Открыть
+        </button>
+        <button onClick={openModal} className="uk-button uk-button-primary" name="publish">
           Опубликовать
         </button>
       </div>
       <Spinner active={load} />
+      <ModalOpenPage action={console.log} />
+      <ModalPublish action={save} />
     </>
   );
 }
